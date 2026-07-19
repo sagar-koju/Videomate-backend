@@ -262,7 +262,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Failed to upload avatar to cloudinary");
     }
 
-    await User.findByIdAndUpdate(req.user?._id,
+    const user = await User.findByIdAndUpdate(req.user?._id,
         {
             $set: {
                 avatar: avatar.url
@@ -271,7 +271,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
         {
             new: true,
         }
-    );
+    ).select("-password -refreshToken");
 
     return res
         .status(200)
@@ -291,7 +291,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Failed to upload cover image to cloudinary");
     }
 
-    await User.findByIdAndUpdate(req.user?._id,
+    const user = await User.findByIdAndUpdate(req.user?._id,
         {
             $set: {
                 coverImage: coverImage.url
@@ -300,7 +300,7 @@ const updateCoverImage = asyncHandler(async (req, res) => {
         {
             new: true,
         }
-    );
+    ).select("-password -refreshToken");
     
     return res
         .status(200)
