@@ -40,7 +40,7 @@ router.route("/change-password").post(verifyJWT, changeCurrentPassword);
 
 router.route("/current-user").get(verifyJWT, getCurrentUser);
 
-router.route("/watch-history").get(verifyJWT, getWatchHistory);
+router.route("/history").get(verifyJWT, getWatchHistory);
 
 router.route("/update-account").patch(verifyJWT, updateAccountDetails);
 
