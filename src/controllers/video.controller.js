@@ -53,45 +53,94 @@ const uploadVideo = asyncHandler(async (req, res) => {
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
-    // route parameter
     const { videoId } = req.params;
 
     if (!isValidObjectId(videoId)) {
         throw new ApiError(400, "Invalid video ID");
     }
 
-    const video = await Video.findOne({ _id: videoId, isPublished: true });
+    const video = await Video.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(videoId),
+                isPublished: true
+            }
+        },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes"
+            }
+        },
+        {
+            $addFields: {
+                likesCount: { $size: "$likes" },
+                isLiked: req.user
+                    ? { $in: [req.user._id, "$likes.likedBy"] }
+                    : false
+            }
+        },
+        {
+            $project: {
+                likes: 0 // Exclude the likes array from the final result
+            }
+        }
+    ])
 
-    if (!video) {
+    if (!video.length) {
         throw new ApiError(404, "Video not found");
     }
 
-    const like
-
     return res
         .status(200)
-        .json(new ApiResponse(200, video, "Video fetched successfully"));
-});
+        .json(new ApiResponse(200, video[0], "Video fetched successfully"));
+})
 
 const getAllVideos = asyncHandler(async (req, res) => {
-    // query parameters
     const { cursor, limit = 10 } = req.query;
     const limitNumber = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
 
     const filter = { isPublished: true };
 
-    // here cursor is the _id of the last video fetched in the previous request, used for pagination. 
     if (cursor) {
-        if(!isValidObjectId(cursor)) {
+        if (!isValidObjectId(cursor)) {
             throw new ApiError(400, "Invalid cursor");
         }
         // added new _id field in the filter object to fetch videos with _id less than the cursor value for pagination
-        filter._id = { $lt: cursor };
+        filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
     }
 
-    const videos = await Video.find(filter)
-        .sort({ _id: -1 })
-        .limit(limitNumber + 1);
+    const videos = await Video.aggregate([
+        { $match: filter },
+        { $sort: { _id: -1 } },
+        { $limit: limitNumber + 1 },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            username: 1,
+                            fullName: 1,
+                            avatar: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            // Unwind the owner array to get a single object instead of an array
+            $addFields: {
+                owner: { $arrayElemAt: ["$owner", 0] }
+            }
+        }
+    ])
 
     const hasMore = videos.length > limitNumber;
     const results = hasMore ? videos.slice(0, limitNumber) : videos;
@@ -99,14 +148,64 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
     return res
         .status(200)
-        .json(new ApiResponse(200, { 
-            videos, 
-            nextCursor, 
-            hasMore 
-        }, 
-        "Videos fetched successfully"));
+        .json(new ApiResponse(200, {
+            videos: results,
+            nextCursor,
+            hasMore
+        },
+            "Videos fetched successfully"));
 });
 
+const getMyVideos = asyncHandler(async (req, res) => {
+    const { cursor, limit = 10 } = req.query;
+    const limitNumber = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+
+    const filter = { owner: req.user._id };
+
+    if (cursor) {
+        if (!isValidObjectId(cursor)) {
+            throw new ApiError(400, "Invalid cursor");
+        }
+        filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
+    }
+
+    const videos = await Video.aggregate([
+        { $match: filter },
+        { $sort: { _id: -1 } },
+        { $limit: limitNumber + 1 },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes",
+            }
+        },
+        {
+            $addFields: {
+                likesCount: { $size: "$likes" },
+            }
+        },
+        {
+            $project: {
+                likes: 0
+            }
+        }
+    ]);
+
+const hasMore = videos.length > limitNumber;
+const results = hasMore ? videos.slice(0, limitNumber) : videos;
+const nextCursor = hasMore ? results[results.length - 1]._id : null;
+
+return res
+    .status(200)
+    .json(new ApiResponse(200, {
+        videos: results,
+        nextCursor,
+        hasMore
+    },
+        "My videos fetched successfully"));
+});
 
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
@@ -187,6 +286,7 @@ export {
     uploadVideo,
     getVideoById,
     getAllVideos,
+    getMyVideos,
     updateVideo,
     deleteVideo,
     toggleVideoPublishStatus

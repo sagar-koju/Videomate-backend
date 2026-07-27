@@ -5,12 +5,20 @@ import {
     uploadVideo,
     getVideoById,
     getAllVideos,
+    getMyVideos,
     updateVideo,
     deleteVideo,
     toggleVideoPublishStatus
 } from "../controllers/video.controller.js";
 
 const router = Router();
+
+router.route("/").get(getAllVideos);
+
+router.route("/me").get(verifyJWT, getMyVideos);
+
+router.route("/:videoId").get(getVideoById);
+
 router.use(verifyJWT);
 
 router.route("/upload").post(
@@ -25,8 +33,6 @@ router.route("/upload").post(
         }
     ]), uploadVideo);
 
-router.route("/").get(getAllVideos);
-router.route("/:videoId").get(getVideoById);
 router.route("/:videoId").patch(upload.single("thumbnail"), updateVideo);
 router.route("/:videoId").delete(deleteVideo);
 router.route("/publish/:videoId").patch(toggleVideoPublishStatus);

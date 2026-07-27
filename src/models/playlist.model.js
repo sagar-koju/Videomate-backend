@@ -17,6 +17,10 @@ const playlistSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: true
+    },
+    isPublic: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 
