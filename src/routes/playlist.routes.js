@@ -12,12 +12,12 @@ import {
 
 const router = Router();
 
+router.route('/me').get(verifyJWT, getUserPlaylists);
 router.route('/:playlistId').get(getPlaylistById);
 
 router.use(verifyJWT);
 
 router.route('/').post(createPlaylist);
-router.route('/me').get(getUserPlaylists);
 router.route('/:playlistId').delete(deletePlaylist);
 router.route('/:playlistId/videos/:videoId').post(addVideoToPlaylist).delete(removeVideoFromPlaylist);
 router.route('/:playlistId/visibility').patch(togglePlaylistVisibility);

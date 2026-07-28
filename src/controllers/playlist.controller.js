@@ -126,7 +126,8 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 const getUserPlaylists = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
-    const playlists = await Playlist.find({ owner: userId });
+    const playlists = await Playlist.find({ owner: userId })
+    .sort({ createdAt: -1 })
 
     return res
         .status(200)
@@ -144,7 +145,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     const playlist = await Playlist.findById(playlistId)
         .sort({ createdAt: -1 })
         .populate('videos')
-        .populate('owner');
+        .populate('owner', 'username avatar');
 
     if (!playlist) {
         throw new ApiError(404, 'Playlist not found');
@@ -182,10 +183,10 @@ const togglePlaylistVisibility = asyncHandler(async (req, res) => {
 
     const updatedPlaylist = await Playlist.findByIdAndUpdate(playlistId,
         // Evaluated by MongoDB
-        { $set: { isPublic: {$not: "$isPublic"} } },
+        [{ $set: { isPublic: {$not: "$isPublic"} } }],
         // Evaluated by Node.js
         // { $set: { isPublic: !playlist.isPublic } },
-        { new: true }
+        { returnDocument: 'after', updatePipeline: true }
     );
 
     return res
