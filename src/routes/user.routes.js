@@ -12,8 +12,6 @@ import {
 
 const router = Router();
 
-router.route("/current-user").get(verifyJWT, getCurrentUser);
-
 router.route("/history").get(verifyJWT, getWatchHistory);
 
 router.route("/update-account").patch(verifyJWT, updateAccountDetails);
