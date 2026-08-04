@@ -6,8 +6,6 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
-
-
 const updateAccountDetails = asyncHandler(async (req, res) => {
     const { fullName, email } = req.body;
 
