@@ -5,6 +5,7 @@ import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
+import { accessTokenCookieOptions, refreshTokenCookieOptions } from "../utils/cookieOptions.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
@@ -102,16 +103,12 @@ const loginUser = asyncHandler(async (req, res) => {
     const userData = await User.findById(user._id).select("-password -refreshToken");
 
     // Set the access and refresh tokens in HTTP-only cookies i.e. it is only modifiable by the server and not accessible via JavaScript on the client side, enhancing security against XSS attacks.
-    const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none"
-    };
+    
 
     return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", refreshToken, options)
+        .cookie("accessToken", accessToken, accessTokenCookieOptions)
+        .cookie("refreshToken", refreshToken, refreshTokenCookieOptions)
         .json(
             new ApiResponse(
                 200,
@@ -135,21 +132,16 @@ const logoutUser = asyncHandler(async (req, res) => {
             new: true,
         },
     )
-    const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none" 
-    };
 
     return res
         .status(200)
-        .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
+        .clearCookie("accessToken", accessTokenCookieOptions)
+        .clearCookie("refreshToken", refreshTokenCookieOptions)
         .json(new ApiResponse(200, {}, "User logged out successfully"))
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
-    const incomingRefreshToken = req.cookies?.refreshToken || req.header("Authorization")?.replace("Bearer ", "");
+    const incomingRefreshToken = req.cookies?.refreshToken || req.headers.authorization?.replace("Bearer ", "");
 
     if (!incomingRefreshToken) {
         console.error("Refresh token is required");
@@ -177,18 +169,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Invalid refresh token");
     }
 
-    const options = {
-        httpOnly: true,
-        secure: true,
-        sameSite: "none", 
-    };
-
     const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshTokens(user._id);
 
     return res
         .status(200)
-        .cookie("accessToken", accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
+        .cookie("accessToken", accessToken, accessTokenCookieOptions)
+        .cookie("refreshToken", newRefreshToken, refreshTokenCookieOptions)
         .json(
             new ApiResponse(
                 200,
