@@ -104,7 +104,8 @@ const loginUser = asyncHandler(async (req, res) => {
     // Set the access and refresh tokens in HTTP-only cookies i.e. it is only modifiable by the server and not accessible via JavaScript on the client side, enhancing security against XSS attacks.
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: "none"
     };
 
     return res
@@ -136,7 +137,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     )
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: "none" 
     };
 
     return res
@@ -177,7 +179,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true
+        secure: true,
+        sameSite: "none", 
     };
 
     const { accessToken, refreshToken: newRefreshToken } = await generateAccessAndRefreshTokens(user._id);

@@ -1,24 +1,25 @@
-import {asyncHandler} from "../utils/asyncHandler.js"
+import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiError } from "../utils/ApiError.js"
 import jwt from "jsonwebtoken"
 import { User } from "../models/user.model.js"
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
-        // const token = req.cookies?.accessToken || req.headers("Authorization")?.replace("Bearer ", "")
-        const token = req.cookies?.accessToken || req.headers.authorization?.replace("Bearer ", "")
+    console.log('Cookies:', req.cookies);
+    console.log('Authorization Header:', req.headers.authorization);
 
-        if (!token) {
-            throw new ApiError(401, "Unauthorized request")
-        }
+    const token = req.cookies?.accessToken || req.headers.authorization?.replace("Bearer ", "")
 
-        const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+    if (!token) {
+        throw new ApiError(401, "Unauthorized request")
+    }
 
-        const user = await User.findById(decodedToken._id).select("-password -refreshToken")
-
-        if (!user) {
-            throw new ApiError(401, "Invalid token, user not found")
-        }
-
-        req.user = user
+    try {
+        const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+        console.log('Decoded:', decoded)
+        req.user = decoded
         next()
+    } catch (err) {
+        console.log('JWT verify error:', err.message) // <-- this is key
+        return res.status(401).json({ message: "Unauthorized - invalid token" })
+    }
 })
