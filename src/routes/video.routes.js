@@ -6,6 +6,7 @@ import {
     getVideoById,
     getAllVideos,
     getMyVideos,
+    getChannelVideos,
     updateVideo,
     deleteVideo,
     toggleVideoPublishStatus
@@ -14,10 +15,9 @@ import {
 const router = Router();
 
 router.route("/").get(getAllVideos);
-
 router.route("/me").get(verifyJWT, getMyVideos);
-
 router.route("/:videoId").get(getVideoById);
+router.route("/channel/:userId").get(getChannelVideos);
 
 router.use(verifyJWT);
 

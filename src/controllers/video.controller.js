@@ -207,6 +207,66 @@ return res
         "My videos fetched successfully"));
 });
 
+const getChannelVideos = asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+     const { cursor, limit = 10 } = req.query;
+    const limitNumber = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400, "Invalid user ID");
+    }
+
+    const filter = { 
+        owner: new mongoose.Types.ObjectId(userId), 
+        isPublished: true 
+    };
+
+    if (cursor) {
+        if (!isValidObjectId(cursor)) {
+            throw new ApiError(400, "Invalid cursor");
+        }
+        filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
+    }
+
+    const videos = await Video.aggregate([
+        { $match: filter },
+        { $sort: { _id: -1 } },
+        { $limit: limitNumber + 1 },
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likes",
+            }
+        },
+        {
+            $addFields: {
+                likesCount: { $size: "$likes" },
+            }
+        },
+        {
+            $project: {
+                likes: 0
+            }
+        }
+    ]);
+
+const hasMore = videos.length > limitNumber;
+const results = hasMore ? videos.slice(0, limitNumber) : videos;
+const nextCursor = hasMore ? results[results.length - 1]._id : null;
+
+return res
+    .status(200)
+    .json(new ApiResponse(200, {
+        videos: results,
+        nextCursor,
+        hasMore
+    },
+        "Channel videos fetched successfully"));
+
+})
+
 const updateVideo = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
     const { title, description, isPublished } = req.body;
@@ -287,6 +347,7 @@ export {
     getVideoById,
     getAllVideos,
     getMyVideos,
+    getChannelVideos,
     updateVideo,
     deleteVideo,
     toggleVideoPublishStatus
