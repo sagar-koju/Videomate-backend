@@ -74,11 +74,25 @@ const getVideoById = asyncHandler(async (req, res) => {
                 as: "owner",
                 pipeline: [
                     {
+                        $lookup: {
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "channel",
+                            as: "subscribers"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            subscribersCount: { $size: "$subscribers" }
+                        },
+                    },
+                    {
                         $project: {
                             _id: 1,
                             username: 1,
                             fullName: 1,
-                            avatar: 1
+                            avatar: 1,
+                            subscribersCount: 1
                         }
                     }
                 ]
@@ -212,32 +226,32 @@ const getMyVideos = asyncHandler(async (req, res) => {
         }
     ]);
 
-const hasMore = videos.length > limitNumber;
-const results = hasMore ? videos.slice(0, limitNumber) : videos;
-const nextCursor = hasMore ? results[results.length - 1]._id : null;
+    const hasMore = videos.length > limitNumber;
+    const results = hasMore ? videos.slice(0, limitNumber) : videos;
+    const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
-return res
-    .status(200)
-    .json(new ApiResponse(200, {
-        videos: results,
-        nextCursor,
-        hasMore
-    },
-        "My videos fetched successfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {
+            videos: results,
+            nextCursor,
+            hasMore
+        },
+            "My videos fetched successfully"));
 });
 
 const getChannelVideos = asyncHandler(async (req, res) => {
     const { userId } = req.params;
-     const { cursor, limit = 10 } = req.query;
+    const { cursor, limit = 10 } = req.query;
     const limitNumber = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
 
     if (!isValidObjectId(userId)) {
         throw new ApiError(400, "Invalid user ID");
     }
 
-    const filter = { 
-        owner: new mongoose.Types.ObjectId(userId), 
-        isPublished: true 
+    const filter = {
+        owner: new mongoose.Types.ObjectId(userId),
+        isPublished: true
     };
 
     if (cursor) {
@@ -271,18 +285,18 @@ const getChannelVideos = asyncHandler(async (req, res) => {
         }
     ]);
 
-const hasMore = videos.length > limitNumber;
-const results = hasMore ? videos.slice(0, limitNumber) : videos;
-const nextCursor = hasMore ? results[results.length - 1]._id : null;
+    const hasMore = videos.length > limitNumber;
+    const results = hasMore ? videos.slice(0, limitNumber) : videos;
+    const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
-return res
-    .status(200)
-    .json(new ApiResponse(200, {
-        videos: results,
-        nextCursor,
-        hasMore
-    },
-        "Channel videos fetched successfully"));
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {
+            videos: results,
+            nextCursor,
+            hasMore
+        },
+            "Channel videos fetched successfully"));
 
 })
 
