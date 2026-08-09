@@ -82,7 +82,7 @@ const getVideoById = asyncHandler(async (req, res) => {
                         }
                     }
                 ]
-            }
+            },
         },
         {
             $lookup: {
@@ -94,10 +94,11 @@ const getVideoById = asyncHandler(async (req, res) => {
         },
         {
             $addFields: {
+                owner: { $arrayElemAt: ["$owner", 0] },
                 likesCount: { $size: "$likes" },
                 isLiked: req.user
                     ? { $in: [req.user._id, "$likes.likedBy"] }
-                    : false
+                    : false,
             }
         },
         {
