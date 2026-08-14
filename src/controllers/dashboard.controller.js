@@ -25,7 +25,7 @@ const getUploadedVideos = asyncHandler(async (req, res) => {
     const { cursor, limit = 10 } = req.query;
     const limitNumber = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
 
-    const filter = { owner: req.user._id };
+    const filter = { owner: { $ne: req.user._id }, isPublished: true };
 
     // here cursor is the _id of the last video fetched in the previous request, used for pagination. 
     if (cursor) {
@@ -38,7 +38,8 @@ const getUploadedVideos = asyncHandler(async (req, res) => {
 
     const videos = await Video.find(filter)
         .sort({ _id: -1 })
-        .limit(limitNumber + 1);
+        .limit(limitNumber + 1)
+        .populate('owner', 'username avatar fullName');
 
     const hasMore = videos.length > limitNumber;
     const results = hasMore ? videos.slice(0, limitNumber) : videos;
