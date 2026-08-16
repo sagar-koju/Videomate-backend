@@ -211,10 +211,28 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, user[0]?.watchedHistory || [], "Watch history fetched successfully"))
 });
 
+// const getUserByUsername = asyncHandler(async (req, res) => {
+//     const { username } = req.params;
+
+//     if(!username?.trim()) {
+//         throw new ApiError(400, "Username is required");
+//     }
+
+//     const user = await User.findOne({ username: username.toLowerCase() }).select("-password -refreshToken");
+
+//     if(!user) {
+//         throw new ApiError(404, "User does not exist");
+//     }
+
+//     return res
+//         .status(200)
+//         .json(new ApiResponse(200, user, "User fetched successfully"))
+// });
 export {
     updateAccountDetails,
     updateCoverImage,
     updateAvatar,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    // getUserByUsername
 };

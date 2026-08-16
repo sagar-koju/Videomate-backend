@@ -1,10 +1,11 @@
 import Router from 'express';
-import {verifyJWT} from '../middlewares/auth.middleware.js';
+import {verifyJWT, optionalVerifyJWT} from '../middlewares/auth.middleware.js';
 import { 
     createPlaylist, 
     addVideoToPlaylist,
     removeVideoFromPlaylist,
     deletePlaylist,
+    getMyPlaylists,
     getUserPlaylists,
     getPlaylistById,
     togglePlaylistVisibility
@@ -12,8 +13,9 @@ import {
 
 const router = Router();
 
-router.route('/me').get(verifyJWT, getUserPlaylists);
-router.route('/:playlistId').get(getPlaylistById);
+router.route('/me').get(verifyJWT, getMyPlaylists);
+router.route('/:playlistId').get(optionalVerifyJWT, getPlaylistById);
+router.route('/user/:username').get(getUserPlaylists);
 
 router.use(verifyJWT);
 
