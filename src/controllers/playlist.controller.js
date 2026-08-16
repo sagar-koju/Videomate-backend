@@ -125,13 +125,42 @@ const deletePlaylist = asyncHandler(async (req, res) => {
 
 const getMyPlaylists = asyncHandler(async (req, res) => {
     const userId = req.user._id;
+    const { cursor, limit = 10 } = req.query;
+    const limitNumber = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
 
-    const playlists = await Playlist.find({ owner: userId })
-        .sort({ createdAt: -1 })
+    const filter = { owner: userId};
+
+    if (cursor) {
+        if (!isValidObjectId(cursor)) {
+            throw new ApiError(400, 'Invalid cursor ID');
+        }
+        filter._id = { $lt: new mongoose.Types.ObjectId(cursor) };
+    }
+
+    const playlists = await Playlist.aggregate([
+        { $match: filter },
+        { $sort: { _id: -1 } },
+        { $limit: limitNumber + 1 },
+        {
+            $addFields: {
+                videoCount: { $size: "$videos" }
+            }
+        },
+        {
+            $project: {
+                videos: 0,
+                owner: 0,
+            }
+        }
+    ])
+
+    const hasMore = playlists.length > limitNumber;
+    const results = hasMore ? playlists.slice(0, limitNumber) : playlists;
+    const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
     return res
         .status(200)
-        .json(new ApiResponse(200, playlists, 'User playlists fetched successfully'));
+        .json(new ApiResponse(200, { playlists: results, nextCursor, hasMore }, 'User playlists fetched successfully'));
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
@@ -160,7 +189,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     const playlists = await Playlist.aggregate([
         { $match: filter },
         { $sort: { createdAt: -1 } },
-        { $limit: limitNumber },
+        { $limit: limitNumber + 1 },
         {
             $addFields: {
                 videoCount: { $size: "$videos" }
@@ -169,12 +198,13 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         {
             $project: {
                 videos: 0,
+                owner: 0,
             }
         }
     ]);
 
     const hasMore = playlists.length > limitNumber;
-    const results = hasMore ? playlists.slice(0, limitNumber) : playlists;
+    const results = hasMore ? playlists.slice(0, limitNumber - 1) : playlists;
     const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
     return res
@@ -220,7 +250,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     const [videos, videoCount] = await Promise.all([
         Video.find(videoFilter)
             .sort({ createdAt: -1 })
-            .limit(limitNumber +1)
+            .limit(limitNumber + 1)
             .populate('owner', 'username avatar'),
         Video.countDocuments(videoFilter)
     ]);
