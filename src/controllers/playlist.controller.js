@@ -116,7 +116,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
         throw new ApiError(403, 'You are not authorized to delete this playlist');
     }
 
-    await Playlist.findOneAndDelete(playlistId);
+    await Playlist.findOneAndDelete({ _id: playlistId });
 
     return res
         .status(200)
