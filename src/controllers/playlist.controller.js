@@ -174,6 +174,10 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
     const user = await User.findOne({ username });
 
+    if (!user) {
+        throw new ApiError(404, 'User not found');
+    }
+
     const filter = { owner: user._id, isPublic: true };
     if (cursor) {
         if (!isValidObjectId(cursor)) {
@@ -191,20 +195,33 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         { $sort: { createdAt: -1 } },
         { $limit: limitNumber + 1 },
         {
+            $lookup: {
+                from: 'users',
+                localField: 'owner',
+                foreignField: '_id',
+                as: 'owner',
+                pipeline: [
+                    { 
+                        $project: { username: 1, fullName: 1, avatar: 1 } 
+                    }
+                ]
+            }
+        },
+        {
             $addFields: {
+                owner: { $arrayElemAt: ["$owner", 0] },
                 videoCount: { $size: "$videos" }
             }
         },
         {
             $project: {
                 videos: 0,
-                owner: 0,
             }
         }
     ]);
 
     const hasMore = playlists.length > limitNumber;
-    const results = hasMore ? playlists.slice(0, limitNumber - 1) : playlists;
+    const results = hasMore ? playlists.slice(0, limitNumber) : playlists;
     const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
     return res
